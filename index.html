@@ -290,7 +290,7 @@
     formData.append("persentase", Math.round((score / quizData.length) * 100));
     formData.append("timestamp", new Date().toLocaleString());
 
-    fetch("https://script.google.com/macros/s/AKfycbwv42CDKvqR_N0qbetRiO3C-6ecORC7tJdXNM-8Bvf1X3Ff33xpW1TIKaDkYpQp2rkwUw/exec", {
+    fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet1", {
       method: "POST",
       body: formData
     })

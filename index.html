@@ -99,34 +99,46 @@
   </div>
 
   <!-- Soal Ujian -->
-  <div id="quizContainer" class="d-none">
-    <div class="question-header">
-      <span id="questionNumber">Soal 1</span>
-      <span id="questionTotal">dari 5</span>
-    </div>
-    <div id="timer">Waktu: 10:00</div>
-    <h2 id="question">Pertanyaan</h2>
-    <form id="quizForm">
-      <label class="option d-block">
-        <input type="radio" name="option" value="A" /> 
-        <span id="optionA"></span>
-      </label>
-      <label class="option d-block">
-        <input type="radio" name="option" value="B" /> 
-        <span id="optionB"></span>
-      </label>
-      <label class="option d-block">
-        <input type="radio" name="option" value="C" /> 
-        <span id="optionC"></span>
-      </label>
-      <label class="option d-block">
-        <input type="radio" name="option" value="D" /> 
-        <span id="optionD"></span>
-      </label>
-      <button type="button" id="nextButton" class="btn btn-success mt-3" onclick="submitAnswer()">Selanjutnya</button>
-    </form>
-    <div class="navigation-buttons" id="navigationButtons"></div>
+<div id="quizContainer" class="d-none">
+  
+  <!-- Header Nomor Soal -->
+  <div class="question-header">
+    <span id="questionNumber">Soal 1</span>
+    <span id="questionTotal">dari 5</span>
   </div>
+
+  <!-- Timer -->
+  <div id="timer">Waktu: 10:00</div>
+
+  <!-- Di sinilah letak bagian yang Anda tanyakan -->
+  <h2 id="question">Pertanyaan</h2>
+  <div id="imageContainer"></div> <!-- Tempat menampilkan gambar -->
+
+  <!-- Form Opsi Jawaban -->
+  <form id="quizForm">
+    <label class="option d-block">
+      <input type="radio" name="option" value="A" /> 
+      <span id="optionA"></span>
+    </label>
+    <label class="option d-block">
+      <input type="radio" name="option" value="B" /> 
+      <span id="optionB"></span>
+    </label>
+    <label class="option d-block">
+      <input type="radio" name="option" value="C" /> 
+      <span id="optionC"></span>
+    </label>
+    <label class="option d-block">
+      <input type="radio" name="option" value="D" /> 
+      <span id="optionD"></span>
+    </label>
+    <button type="button" id="nextButton" class="btn btn-success mt-3" onclick="submitAnswer()">Selanjutnya</button>
+  </form>
+
+  <!-- Tombol Navigasi Soal -->
+  <div class="navigation-buttons" id="navigationButtons"></div>
+
+</div>
 
   <!-- Review Jawaban -->
   <div id="reviewContainer" class="d-none">
@@ -216,26 +228,55 @@
   }
 
   function loadQuestion() {
-    if (currentQuestion >= quizData.length) {
-      showResult();
-      return;
-    }
-    const data = quizData[currentQuestion];
-    document.getElementById("question").innerText = data.SOAL;
-    document.getElementById("optionA").innerText = data["OPSI A"];
-    document.getElementById("optionB").innerText = data["OPSI B"];
-    document.getElementById("optionC").innerText = data["OPSI C"];
-    document.getElementById("optionD").innerText = data["OPSI D"];
-    document.getElementById("questionNumber").innerText = `Soal ${currentQuestion + 1}`;
-    document.getElementById("questionTotal").innerText = `dari ${quizData.length}`;
-    const selectedOption = answers[currentQuestion];
-    document.querySelectorAll('input[name="option"]').forEach(radio => {
-      radio.checked = radio.value.toUpperCase() === selectedOption;
-    });
-    const nextBtn = document.getElementById("nextButton");
-    nextBtn.innerText = currentQuestion === quizData.length - 1 ? "Selesai" : "Selanjutnya";
-    updateNavigationButtons();
+  if (currentQuestion >= quizData.length) {
+    showResult();
+    return;
   }
+
+  const data = quizData[currentQuestion];
+  const questionElement = document.getElementById("question");
+  const imageContainer = document.getElementById("imageContainer"); // Tambahkan elemen ini di HTML
+
+  // Bersihkan konten sebelumnya
+  questionElement.innerHTML = "";
+  imageContainer.innerHTML = "";
+
+  // Tampilkan soal
+  questionElement.innerText = data.SOAL;
+
+  // Jika ada gambar, tampilkan
+  if (data.GAMBAR) {
+    const img = document.createElement("img");
+    img.src = data.GAMBAR;
+    img.alt = "Gambar Soal";
+    img.style.maxWidth = "30%";
+    img.style.marginTop = "10px";
+    img.style.borderRadius = "8px";
+    imageContainer.appendChild(img);
+  }
+
+  // Isi opsi jawaban
+  document.getElementById("optionA").innerText = data["OPSI A"];
+  document.getElementById("optionB").innerText = data["OPSI B"];
+  document.getElementById("optionC").innerText = data["OPSI C"];
+  document.getElementById("optionD").innerText = data["OPSI D"];
+
+  // Update nomor soal
+  document.getElementById("questionNumber").innerText = `Soal ${currentQuestion + 1}`;
+  document.getElementById("questionTotal").innerText = `dari ${quizData.length}`;
+
+  // Centang jawaban jika sudah dipilih
+  const selectedOption = answers[currentQuestion];
+  document.querySelectorAll('input[name="option"]').forEach(radio => {
+    radio.checked = radio.value.toUpperCase() === selectedOption;
+  });
+
+  // Ganti teks tombol jika soal terakhir
+  const nextBtn = document.getElementById("nextButton");
+  nextBtn.innerText = currentQuestion === quizData.length - 1 ? "Selesai" : "Selanjutnya";
+
+  updateNavigationButtons();
+}
 
   function submitAnswer() {
     const selectedOption = document.querySelector('input[name="option"]:checked');
@@ -283,12 +324,26 @@
     renderReview();
   }
 
-  function sendFinalData() {
-    const formData = new FormData();
-    formData.append("nama", studentName);
-    formData.append("nilai", score);
-    formData.append("persentase", Math.round((score / quizData.length) * 100));
-    formData.append("timestamp", new Date().toLocaleString());
+ function sendFinalData() {
+  const formData = new FormData();
+  formData.append("nama", studentName);
+  formData.append("nilai", score);
+  formData.append("persentase", Math.round((score / quizData.length) * 100));
+  formData.append("timestamp", new Date().toLocaleString());
+
+ quizData.forEach((q, index) => {
+  const answer = answers[index]; // Jawaban bisa berupa "A", "B", dll. atau null
+  let displayText = "";
+
+  if (answer === null) {
+    displayText = "Tidak dijawab";
+  } else {
+    const answerLabel = q[`OPSI ${answer}`];
+    displayText = `${answer}. ${answerLabel}`;
+  }
+
+  formData.append(`soal_${index + 1}`, displayText);
+});
 
     fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet1", {
       method: "POST",
@@ -317,24 +372,32 @@
   }
 
   function renderReview() {
-    const container = document.getElementById("reviewList");
-    container.innerHTML = "";
+  const container = document.getElementById("reviewList");
+  container.innerHTML = "";
 
-    quizData.forEach((q, index) => {
-      const div = document.createElement("div");
-      div.className = "review-item";
+  quizData.forEach((q, index) => {
+    const div = document.createElement("div");
+    div.className = "review-item";
 
-      const correct = answers[index] === q.JAWABAN;
-      div.classList.add("review-answer", correct ? "correct" : "incorrect");
+    const correct = answers[index] === q.JAWABAN;
+    div.classList.add("review-answer", correct ? "correct" : "incorrect");
 
-      div.innerHTML = `
-        <strong>Soal ${index + 1}:</strong> ${q.SOAL}<br/>
-        <strong>Jawaban Anda:</strong> ${answers[index] || "Tidak dijawab"}<br/>
-        <span class="feedback-icon ${correct ? "correct" : "incorrect"}">${correct ? "✔" : "✘"}</span>
-      `;
-      container.appendChild(div);
-    });
-  }
+    // Tambahkan gambar jika tersedia
+    let imageHtml = "";
+    if (q.GAMBAR) {
+      imageHtml = `<div><img src="${q.GAMBAR}" style="max-width: 30%; height: auto; border-radius: 8px; margin: 10px 0;"></div>`;
+    }
+
+    div.innerHTML = `
+      <strong>Soal ${index + 1}:</strong> ${q.SOAL}<br/>
+      ${imageHtml}
+      <strong>Jawaban Anda:</strong> ${answers[index] || "Tidak dijawab"}<br/>
+      <span class="feedback-icon ${correct ? "correct" : "incorrect"}">${correct ? "✔" : "✘"}</span>
+    `;
+
+    container.appendChild(div);
+  });
+}
 
   function redirectToHome() {
     location.reload();

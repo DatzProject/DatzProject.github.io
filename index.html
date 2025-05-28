@@ -379,19 +379,27 @@
     const div = document.createElement("div");
     div.className = "review-item";
 
-    const correct = answers[index] === q.JAWABAN;
+    const answerKey = answers[index]; // Misalnya: 'A', 'B', dll.
+    const correct = answerKey === q.JAWABAN;
+
+    // Ambil isi jawaban lengkap: misalnya "A. 17 Agustus 1945"
+    let answerText = "Tidak dijawab";
+    if (answerKey) {
+      answerText = `${answerKey}. ${q["OPSI " + answerKey]}`;
+    }
+
     div.classList.add("review-answer", correct ? "correct" : "incorrect");
 
     // Tambahkan gambar jika tersedia
     let imageHtml = "";
     if (q.GAMBAR) {
-      imageHtml = `<div><img src="${q.GAMBAR}" style="max-width: 30%; height: auto; border-radius: 8px; margin: 10px 0;"></div>`;
+      imageHtml = `<div><img src="${q.GAMBAR}" style="max-width: 20%; height: auto; border-radius: 8px; margin: 10px 0;"></div>`;
     }
 
     div.innerHTML = `
       <strong>Soal ${index + 1}:</strong> ${q.SOAL}<br/>
       ${imageHtml}
-      <strong>Jawaban Anda:</strong> ${answers[index] || "Tidak dijawab"}<br/>
+      <strong>Jawaban Anda:</strong> ${answerText}<br/>
       <span class="feedback-icon ${correct ? "correct" : "incorrect"}">${correct ? "✔" : "✘"}</span>
     `;
 

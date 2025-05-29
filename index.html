@@ -87,58 +87,75 @@
     .review-answer.incorrect {
       background-color: #ffd1d1;
     }
+    ..error-text {
+  color: red;
+  font-size: 0.875em;
+  margin-top: 5px;
+  display: none;
+}
+.error-text.d-none {
+  display: none;
+}
+.success-text {
+  color: green;
+  font-size: 0.875em;
+  margin-top: 5px;
+  display: none;
+}
   </style>
 </head>
 <body>
+
 <div class="quiz-container">
-  <!-- Form Input Nama -->
+  <!-- Form Input Nama dan NISN -->
   <div id="nameForm">
-    <h2>Masukkan Nama Anda</h2>
-    <input type="text" id="studentName" class="form-control" placeholder="Nama Lengkap" required />
-    <button onclick="startQuiz()" class="btn btn-primary mt-3">Mulai Ujian</button>
+    <h2>Masukkan Identitas Anda</h2>
+
+    <label for="studentName">Nama:</label>
+    <select id="studentName" class="form-control" required>
+      <option value="">-- Pilih Nama --</option>
+    </select>
+
+    <!-- Input NISN -->
+<label for="studentNisn" class="mt-2">NISN:</label>
+<input type="text" id="studentNisn" class="form-control" placeholder="Masukkan NISN" />
+
+<!-- Pesan Error/Info -->
+<div id="errorNisn" class="error-text d-none"></div>
+
+    <button id="btnStartQuiz" class="btn btn-primary mt-3" disabled onclick="startQuiz()">Mulai Ujian</button>
   </div>
 
   <!-- Soal Ujian -->
-<div id="quizContainer" class="d-none">
-  
-  <!-- Header Nomor Soal -->
-  <div class="question-header">
-    <span id="questionNumber">Soal 1</span>
-    <span id="questionTotal">dari 5</span>
+  <div id="quizContainer" class="d-none">
+    <div class="question-header">
+      <span id="questionNumber">Soal 1</span>
+      <span id="questionTotal">dari 5</span>
+    </div>
+    <div id="timer">Waktu: 10:00</div>
+    <h2 id="question">Pertanyaan</h2>
+    <div id="imageContainer"></div>
+    <form id="quizForm">
+      <label class="option d-block">
+        <input type="radio" name="option" value="A" /> 
+        <span id="optionA"></span>
+      </label>
+      <label class="option d-block">
+        <input type="radio" name="option" value="B" /> 
+        <span id="optionB"></span>
+      </label>
+      <label class="option d-block">
+        <input type="radio" name="option" value="C" /> 
+        <span id="optionC"></span>
+      </label>
+      <label class="option d-block">
+        <input type="radio" name="option" value="D" /> 
+        <span id="optionD"></span>
+      </label>
+      <button type="button" id="nextButton" class="btn btn-success mt-3" onclick="submitAnswer()">Selanjutnya</button>
+    </form>
+    <div class="navigation-buttons" id="navigationButtons"></div>
   </div>
-
-  <!-- Timer -->
-  <div id="timer">Waktu: 10:00</div>
-
-  <!-- Di sinilah letak bagian yang Anda tanyakan -->
-  <h2 id="question">Pertanyaan</h2>
-  <div id="imageContainer"></div> <!-- Tempat menampilkan gambar -->
-
-  <!-- Form Opsi Jawaban -->
-  <form id="quizForm">
-    <label class="option d-block">
-      <input type="radio" name="option" value="A" /> 
-      <span id="optionA"></span>
-    </label>
-    <label class="option d-block">
-      <input type="radio" name="option" value="B" /> 
-      <span id="optionB"></span>
-    </label>
-    <label class="option d-block">
-      <input type="radio" name="option" value="C" /> 
-      <span id="optionC"></span>
-    </label>
-    <label class="option d-block">
-      <input type="radio" name="option" value="D" /> 
-      <span id="optionD"></span>
-    </label>
-    <button type="button" id="nextButton" class="btn btn-success mt-3" onclick="submitAnswer()">Selanjutnya</button>
-  </form>
-
-  <!-- Tombol Navigasi Soal -->
-  <div class="navigation-buttons" id="navigationButtons"></div>
-
-</div>
 
   <!-- Review Jawaban -->
   <div id="reviewContainer" class="d-none">
@@ -149,7 +166,7 @@
     <button class="btn btn-primary" onclick="redirectToHome()">Kembali ke Awal</button>
   </div>
 
-  <!-- Hasil Ujian (Opsional) -->
+  <!-- Hasil Ujian -->
   <div id="scoreContainer" class="d-none text-center">
     <h2>Waktu Habis!</h2>
     <p><strong>Nama:</strong> <span id="finalName"></span></p>
@@ -164,19 +181,90 @@
   let score = 0;
   let studentName = "";
   let answers = [];
-  const WEB_APP_URL = "https://script.google.com/macros/s/AKfycbwv42CDKvqR_N0qbetRiO3C-6ecORC7tJdXNM-8Bvf1X3Ff33xpW1TIKaDkYpQp2rkwUw/exec ";
   let timerInterval;
+  let studentDatabase = {};
+
+  // Ambil daftar siswa dari Sheet3
+  async function fetchStudentList() {
+    try {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet3 ");
+      const studentList = await response.json();
+
+      const select = document.getElementById("studentName");
+      select.innerHTML = '<option value="">-- Pilih Nama --</option>';
+      studentDatabase = {};
+
+      studentList.forEach(student => {
+        if (student.NAMA_SISWA && student.NISN) {
+          const option = document.createElement("option");
+          option.value = student.NAMA_SISWA;
+          option.textContent = student.NAMA_SISWA;
+          select.appendChild(option);
+
+          studentDatabase[student.NAMA_SISWA] = student.NISN.toString();
+        }
+      });
+
+      const nameSelect = document.getElementById("studentName");
+      const nisnInput = document.getElementById("studentNisn");
+
+      nameSelect.addEventListener("change", validateNisn);
+      nisnInput.addEventListener("input", validateNisn);
+
+    } catch (error) {
+      console.error("Gagal mengambil daftar siswa:", error);
+    }
+  }
+
+  function validateNisn() {
+  const name = document.getElementById("studentName").value;
+  const nisnInput = document.getElementById("studentNisn").value.trim();
+  const errorDiv = document.getElementById("errorNisn");
+  const btnStart = document.getElementById("btnStartQuiz");
+
+  errorDiv.classList.remove("d-none", "success-text");
+  
+  if (!name) {
+    errorDiv.textContent = "Silahkan pilih nama siswa";
+    errorDiv.classList.add("error-text");
+    errorDiv.classList.remove("d-none");
+    btnStart.disabled = true;
+    return;
+  }
+
+  if (!nisnInput) {
+    errorDiv.textContent = "Silahkan isi data nisn anda";
+    errorDiv.classList.add("error-text");
+    errorDiv.classList.remove("d-none");
+    btnStart.disabled = true;
+    return;
+  }
+
+  if (studentDatabase[name] === nisnInput) {
+    errorDiv.textContent = "Data nisn anda sudah benar";
+    errorDiv.classList.remove("error-text");
+    errorDiv.classList.add("success-text");
+    errorDiv.classList.remove("d-none");
+    btnStart.disabled = false;
+  } else {
+    errorDiv.textContent = "Data nisn anda salah";
+    errorDiv.classList.add("error-text");
+    errorDiv.classList.remove("d-none");
+    btnStart.disabled = true;
+  }
+}
 
   async function startQuiz() {
-    const input = document.getElementById("studentName").value.trim();
-    if (!input) {
-      alert("Silakan masukkan nama Anda!");
+    const name = document.getElementById("studentName").value.trim();
+    const nisn = document.getElementById("studentNisn").value.trim();
+
+    if (!name || !nisn || studentDatabase[name] !== nisn) {
+      Swal.fire("Error!", "Nama atau NISN tidak valid.", "error");
       return;
     }
 
-    studentName = input;
+    studentName = name;
     await fetchQuizDataFromSheet();
-
     if (quizData.length === 0) {
       alert("Gagal memuat soal.");
       return;
@@ -187,7 +275,7 @@
     document.getElementById("quizContainer").classList.remove("d-none");
     generateNavigationButtons();
     loadQuestion();
-    startTimer(2 * 60); // 2 menit dalam detik
+    startTimer(2 * 60); // 2 menit
   }
 
   async function fetchQuizDataFromSheet() {
@@ -228,58 +316,48 @@
   }
 
   function loadQuestion() {
-  if (currentQuestion >= quizData.length) {
-    showResult();
-    return;
+    if (currentQuestion >= quizData.length) {
+      showResult();
+      return;
+    }
+
+    const data = quizData[currentQuestion];
+    const questionElement = document.getElementById("question");
+    const imageContainer = document.getElementById("imageContainer");
+
+    questionElement.innerText = data.SOAL;
+    imageContainer.innerHTML = "";
+
+    if (data.GAMBAR) {
+      const img = document.createElement("img");
+      img.src = data.GAMBAR;
+      img.alt = "Gambar Soal";
+      img.style.maxWidth = "30%";
+      img.style.marginTop = "10px";
+      img.style.borderRadius = "8px";
+      imageContainer.appendChild(img);
+    }
+
+    document.getElementById("optionA").innerText = data["OPSI A"];
+    document.getElementById("optionB").innerText = data["OPSI B"];
+    document.getElementById("optionC").innerText = data["OPSI C"];
+    document.getElementById("optionD").innerText = data["OPSI D"];
+
+    document.getElementById("questionNumber").innerText = `Soal ${currentQuestion + 1}`;
+    document.getElementById("questionTotal").innerText = `dari ${quizData.length}`;
+
+    const selectedOption = answers[currentQuestion];
+    document.querySelectorAll('input[name="option"]').forEach(radio => {
+      radio.checked = radio.value.toUpperCase() === selectedOption;
+    });
+
+    const nextBtn = document.getElementById("nextButton");
+    nextBtn.innerText = currentQuestion === quizData.length - 1 ? "Selesai" : "Selanjutnya";
+
+    updateNavigationButtons();
   }
-
-  const data = quizData[currentQuestion];
-  const questionElement = document.getElementById("question");
-  const imageContainer = document.getElementById("imageContainer"); // Tambahkan elemen ini di HTML
-
-  // Bersihkan konten sebelumnya
-  questionElement.innerHTML = "";
-  imageContainer.innerHTML = "";
-
-  // Tampilkan soal
-  questionElement.innerText = data.SOAL;
-
-  // Jika ada gambar, tampilkan
-  if (data.GAMBAR) {
-    const img = document.createElement("img");
-    img.src = data.GAMBAR;
-    img.alt = "Gambar Soal";
-    img.style.maxWidth = "30%";
-    img.style.marginTop = "10px";
-    img.style.borderRadius = "8px";
-    imageContainer.appendChild(img);
-  }
-
-  // Isi opsi jawaban
-  document.getElementById("optionA").innerText = data["OPSI A"];
-  document.getElementById("optionB").innerText = data["OPSI B"];
-  document.getElementById("optionC").innerText = data["OPSI C"];
-  document.getElementById("optionD").innerText = data["OPSI D"];
-
-  // Update nomor soal
-  document.getElementById("questionNumber").innerText = `Soal ${currentQuestion + 1}`;
-  document.getElementById("questionTotal").innerText = `dari ${quizData.length}`;
-
-  // Centang jawaban jika sudah dipilih
-  const selectedOption = answers[currentQuestion];
-  document.querySelectorAll('input[name="option"]').forEach(radio => {
-    radio.checked = radio.value.toUpperCase() === selectedOption;
-  });
-
-  // Ganti teks tombol jika soal terakhir
-  const nextBtn = document.getElementById("nextButton");
-  nextBtn.innerText = currentQuestion === quizData.length - 1 ? "Selesai" : "Selanjutnya";
-
-  updateNavigationButtons();
-}
 
   function submitAnswer() {
-    const selectedOption = document.querySelector('input[name="option"]:checked');
     saveCurrentAnswer();
     if (currentQuestion === quizData.length - 1) {
       showResult();
@@ -318,34 +396,29 @@
     document.getElementById("totalScoreReview").innerText = quizData.length;
     document.getElementById("finalPercentageReview").innerText = Math.round((score / quizData.length) * 100);
 
-    clearInterval(timerInterval); // Stop timer
-    sendFinalData(); // Kirim jawaban secara otomatis
-
+    clearInterval(timerInterval);
+    sendFinalData();
     renderReview();
   }
 
- function sendFinalData() {
-  const formData = new FormData();
-  formData.append("nama", studentName);
-  formData.append("nilai", score);
-  formData.append("persentase", Math.round((score / quizData.length) * 100));
-  formData.append("timestamp", new Date().toLocaleString());
+  function sendFinalData() {
+    const formData = new FormData();
+    formData.append("nama", studentName);
+    formData.append("nilai", score);
+    formData.append("persentase", Math.round((score / quizData.length) * 100));
+    formData.append("timestamp", new Date().toLocaleString());
 
- quizData.forEach((q, index) => {
-  const answer = answers[index]; // Jawaban bisa berupa "A", "B", dll. atau null
-  let displayText = "";
+    quizData.forEach((q, index) => {
+      const answer = answers[index];
+      let displayText = "Tidak dijawab";
+      if (answer) {
+        const answerLabel = q[`OPSI ${answer}`];
+        displayText = `${answer}. ${answerLabel}`;
+      }
+      formData.append(`soal_${index + 1}`, displayText);
+    });
 
-  if (answer === null) {
-    displayText = "Tidak dijawab";
-  } else {
-    const answerLabel = q[`OPSI ${answer}`];
-    displayText = `${answer}. ${answerLabel}`;
-  }
-
-  formData.append(`soal_${index + 1}`, displayText);
-});
-
-    fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet1", {
+    fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet1 ", {
       method: "POST",
       body: formData
     })
@@ -358,58 +431,54 @@
   function startTimer(duration) {
     let timer = duration, minutes, seconds;
     document.getElementById("timer").innerText = `Waktu: 2:00`;
-
     timerInterval = setInterval(() => {
       minutes = parseInt(timer / 60, 10);
       seconds = parseInt(timer % 60, 10);
       document.getElementById("timer").innerText = `Waktu: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-
       if (--timer < 0) {
         clearInterval(timerInterval);
-        showResult(); // Kirim otomatis saat waktu habis
+        showResult();
       }
     }, 1000);
   }
 
   function renderReview() {
-  const container = document.getElementById("reviewList");
-  container.innerHTML = "";
+    const container = document.getElementById("reviewList");
+    container.innerHTML = "";
+    quizData.forEach((q, index) => {
+      const div = document.createElement("div");
+      div.className = "review-item";
+      const answerKey = answers[index];
+      const correct = answerKey === q.JAWABAN;
+      let answerText = "Tidak dijawab";
+      if (answerKey) {
+        answerText = `${answerKey}. ${q["OPSI " + answerKey]}`;
+      }
+      div.classList.add("review-answer", correct ? "correct" : "incorrect");
 
-  quizData.forEach((q, index) => {
-    const div = document.createElement("div");
-    div.className = "review-item";
+      let imageHtml = "";
+      if (q.GAMBAR) {
+        imageHtml = `<div><img src="${q.GAMBAR}" style="max-width: 20%; height: auto; border-radius: 8px; margin: 10px 0;"></div>`;
+      }
 
-    const answerKey = answers[index]; // Misalnya: 'A', 'B', dll.
-    const correct = answerKey === q.JAWABAN;
-
-    // Ambil isi jawaban lengkap: misalnya "A. 17 Agustus 1945"
-    let answerText = "Tidak dijawab";
-    if (answerKey) {
-      answerText = `${answerKey}. ${q["OPSI " + answerKey]}`;
-    }
-
-    div.classList.add("review-answer", correct ? "correct" : "incorrect");
-
-    // Tambahkan gambar jika tersedia
-    let imageHtml = "";
-    if (q.GAMBAR) {
-      imageHtml = `<div><img src="${q.GAMBAR}" style="max-width: 20%; height: auto; border-radius: 8px; margin: 10px 0;"></div>`;
-    }
-
-    div.innerHTML = `
-      <strong>Soal ${index + 1}:</strong> ${q.SOAL}<br/>
-      ${imageHtml}
-      <strong>Jawaban Anda:</strong> ${answerText}<br/>
-      <span class="feedback-icon ${correct ? "correct" : "incorrect"}">${correct ? "✔" : "✘"}</span>
-    `;
-
-    container.appendChild(div);
-  });
-}
+      div.innerHTML = `
+        <strong>Soal ${index + 1}:</strong> ${q.SOAL}<br/>
+        ${imageHtml}
+        <strong>Jawaban Anda:</strong> ${answerText}<br/>
+        <span class="feedback-icon ${correct ? "correct" : "incorrect"}">${correct ? "✔" : "✘"}</span>
+      `;
+      container.appendChild(div);
+    });
+  }
 
   function redirectToHome() {
     location.reload();
   }
+
+  window.onload = () => {
+    fetchStudentList();
+  };
 </script>
+
 </body>
 </html>

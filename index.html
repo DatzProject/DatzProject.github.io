@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ujian Online</title>
   <!-- SweetAlert2 -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>  
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>   
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"  rel="stylesheet" />
   <style>
     body {
@@ -130,7 +130,10 @@
     <label for="studentNisn" class="mt-2">NISN:</label>
     <input type="text" id="studentNisn" class="form-control" placeholder="Masukkan NISN" />
     <div id="errorNisn" class="error-text d-none"></div>
-    <button id="btnStartQuiz" class="btn btn-primary mt-3" disabled onclick="startQuiz()">Mulai Ujian</button>
+    <div class="d-flex justify-content-between mt-3">
+      <button id="btnBackToMaterial" class="btn btn-secondary" onclick="backToMaterialSelection()">Kembali</button>
+      <button id="btnStartQuiz" class="btn btn-primary" disabled onclick="startQuiz()">Mulai Ujian</button>
+    </div>
   </div>
   <!-- Soal Ujian -->
   <div id="quizContainer" class="d-none">
@@ -223,10 +226,8 @@
       Swal.fire("Error!", "Silakan pilih materi terlebih dahulu.", "error");
       return;
     }
-
     const activeBtn = document.querySelector('.material-btn.active');
     const status = activeBtn.getAttribute('data-status');
-
     if (status === "Tidak diizinkan") {
       Swal.fire({
         title: "Akses Ditolak!",
@@ -238,7 +239,6 @@
       });
       return;
     }
-
     document.getElementById("materialSelection").classList.add("d-none");
     document.getElementById("nameForm").classList.remove("d-none");
   }
@@ -504,6 +504,16 @@
 
   function redirectToHome() {
     location.reload();
+  }
+
+  function backToMaterialSelection() {
+    document.getElementById("studentName").value = "";
+    document.getElementById("studentNisn").value = "";
+    document.getElementById("errorNisn").classList.add("d-none");
+    document.getElementById("btnStartQuiz").disabled = true;
+
+    document.getElementById("nameForm").classList.add("d-none");
+    document.getElementById("materialSelection").classList.remove("d-none");
   }
 
   window.onload = () => {

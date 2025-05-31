@@ -254,14 +254,11 @@
   y += 7;
   doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, y);
 
-  // Konversi ke Base64
-  const base64String = doc.output('datauristring').split(',')[1];
+  // Konversi ke Data URL Base64
+  const pdfBase64 = doc.output('datauristring');
 
-  // Gunakan Google Docs Viewer untuk preview PDF
-  const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent('data:application/pdf;base64,' + base64String)}&embedded=true`;
-
-  // Buka PDF di browser eksternal
-  window.open(googleDocsUrl, '_blank');
+  // Membuka PDF di browser luar aplikasi
+  window.open(pdfBase64, '_blank');
 }
 
   async function fetchMaterialList() {

@@ -200,17 +200,15 @@
   function downloadReviewPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-
+  
   // Header
   doc.setFontSize(14);
   doc.text("Waktu Habis!", 10, 10);
   doc.text(`Nama: ${studentName}`, 10, 20);
   doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, 30);
   doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, 40);
-
   doc.setFontSize(12);
   doc.text("Review Jawaban", 10, 50);
-
   let y = 60;
 
   quizData.forEach((q, index) => {
@@ -218,7 +216,6 @@
       doc.addPage();
       y = 20;
     }
-
     const answerKey = answers[index];
     const correct = answerKey === q.JAWABAN;
     let answerText = "Tidak dijawab";
@@ -229,18 +226,16 @@
     // Soal
     doc.text(`Soal ${index + 1}: ${q.SOAL}`, 10, y);
     y += 7;
-
     // Jawaban
     doc.text(`Jawaban Anda: ${answerText}`, 10, y);
     y += 6;
 
-    // Tanda benar/salah sebagai teks biasa (lebih aman)
+    // Status benar/salah
     const statusText = correct ? "(Benar)" : "(Salah)";
-    const textColor = correct ? [0, 128, 0] : [255, 0, 0]; // hijau untuk benar, merah untuk salah
+    const textColor = correct ? [0, 128, 0] : [255, 0, 0];
     doc.setTextColor(...textColor);
     doc.text(statusText, 190, y - 6, null, null, "right");
-    doc.setTextColor(0, 0, 0); // reset warna teks ke hitam
-
+    doc.setTextColor(0, 0, 0); // reset warna teks
     y += 6;
 
     // Garis pemisah
@@ -250,7 +245,7 @@
     }
   });
 
-  // Footer jumlah benar & persentase
+  // Footer
   if (y > 270) {
     doc.addPage();
     y = 20;
@@ -259,8 +254,30 @@
   y += 7;
   doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, y);
 
-  // Simpan PDF
-  doc.save(`Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`);
+  // Konversi ke Blob
+  const pdfBlob = doc.output('blob');
+
+  // Buat URL Object
+  const url = URL.createObjectURL(pdfBlob);
+
+  // Buat elemen <a> untuk download
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`;
+  a.textContent = 'Klik di sini untuk download PDF';
+  a.style.display = 'block';
+  a.style.marginTop = '20px';
+  a.style.textAlign = 'center';
+  a.style.fontSize = '16px';
+  a.style.color = '#0d6efd';
+  a.style.fontWeight = 'bold';
+
+  // Hapus tombol lama jika sudah ada
+  const existingLink = document.getElementById('download-link');
+  if (existingLink) existingLink.remove();
+
+  // Tambahkan link baru
+  document.getElementById('reviewContainer').appendChild(a);
 }
 
   async function fetchMaterialList() {

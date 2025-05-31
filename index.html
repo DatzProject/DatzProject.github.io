@@ -200,7 +200,7 @@
   function downloadReviewPDF() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF();
-  
+
   // Header
   doc.setFontSize(14);
   doc.text("Waktu Habis!", 10, 10);
@@ -260,24 +260,8 @@
   // Buat URL Object
   const url = URL.createObjectURL(pdfBlob);
 
-  // Buat elemen <a> untuk download
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`;
-  a.textContent = 'Klik di sini untuk download PDF';
-  a.style.display = 'block';
-  a.style.marginTop = '20px';
-  a.style.textAlign = 'center';
-  a.style.fontSize = '16px';
-  a.style.color = '#0d6efd';
-  a.style.fontWeight = 'bold';
-
-  // Hapus tombol lama jika sudah ada
-  const existingLink = document.getElementById('download-link');
-  if (existingLink) existingLink.remove();
-
-  // Tambahkan link baru
-  document.getElementById('reviewContainer').appendChild(a);
+  // Buka PDF di browser luar
+  window.open(url, '_blank');
 }
 
   async function fetchMaterialList() {

@@ -257,7 +257,7 @@
   // Konversi ke Base64
   const base64String = doc.output('datauristring').split(',')[1];
 
-  // Buat URL Google Docs Viewer
+  // Gunakan Google Docs Viewer untuk preview PDF
   const googleDocsUrl = `https://docs.google.com/gview?url=${encodeURIComponent('data:application/pdf;base64,' + base64String)}&embedded=true`;
 
   // Buka PDF di browser eksternal

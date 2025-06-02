@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ujian Online</title>
   <!-- SweetAlert2 -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script> 
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>  
   <!-- jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script> 
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>  
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"  rel="stylesheet" />
   <style>
     body {
@@ -195,71 +195,62 @@
   let studentDatabase = {};
   let selectedSheet = "";
   let materialOptions = [];
+  let isDataSent = false; // 👈 Flag untuk cegah kirim ulang data
 
   // === Fungsi untuk download hasil ujian sebagai PDF ===
   function downloadReviewPDF() {
-  const { jsPDF } = window.jspdf;
-  const doc = new jsPDF();
-
-  // Header
-  doc.setFontSize(14);
-  doc.text("Waktu Habis!", 10, 10);
-  doc.text(`Nama: ${studentName}`, 10, 20);
-  doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, 30);
-  doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, 40);
-  doc.setFontSize(12);
-  doc.text("Review Jawaban", 10, 50);
-  let y = 60;
-
-  quizData.forEach((q, index) => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    // Header
+    doc.setFontSize(14);
+    doc.text("Waktu Habis!", 10, 10);
+    doc.text(`Nama: ${studentName}`, 10, 20);
+    doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, 30);
+    doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, 40);
+    doc.setFontSize(12);
+    doc.text("Review Jawaban", 10, 50);
+    let y = 60;
+    quizData.forEach((q, index) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      const answerKey = answers[index];
+      const correct = answerKey === q.JAWABAN;
+      let answerText = "Tidak dijawab";
+      if (answerKey) {
+        answerText = `${answerKey}. ${q["OPSI " + answerKey]}`;
+      }
+      // Soal
+      doc.text(`Soal ${index + 1}: ${q.SOAL}`, 10, y);
+      y += 7;
+      // Jawaban
+      doc.text(`Jawaban Anda: ${answerText}`, 10, y);
+      y += 6;
+      // Tanda benar/salah sebagai teks biasa
+      const statusText = correct ? "(Benar)" : "(Salah)";
+      const textColor = correct ? [0, 128, 0] : [255, 0, 0]; // hijau untuk benar, merah untuk salah
+      doc.setTextColor(...textColor);
+      doc.text(statusText, 190, y - 6, null, null, "right");
+      doc.setTextColor(0, 0, 0); // reset warna teks ke hitam
+      y += 6;
+      // Garis pemisah
+      if (y <= 270) {
+        doc.line(10, y, 200, y);
+        y += 6;
+      }
+    });
+    // Footer jumlah benar & persentase
     if (y > 270) {
       doc.addPage();
       y = 20;
     }
-    const answerKey = answers[index];
-    const correct = answerKey === q.JAWABAN;
-    let answerText = "Tidak dijawab";
-    if (answerKey) {
-      answerText = `${answerKey}. ${q["OPSI " + answerKey]}`;
-    }
-
-    // Soal
-    doc.text(`Soal ${index + 1}: ${q.SOAL}`, 10, y);
+    doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, y);
     y += 7;
-    // Jawaban
-    doc.text(`Jawaban Anda: ${answerText}`, 10, y);
-    y += 6;
-
-    // Status benar/salah
-    const statusText = correct ? "(Benar)" : "(Salah)";
-    const textColor = correct ? [0, 128, 0] : [255, 0, 0];
-    doc.setTextColor(...textColor);
-    doc.text(statusText, 190, y - 6, null, null, "right");
-    doc.setTextColor(0, 0, 0); // reset warna teks
-    y += 6;
-
-    // Garis pemisah
-    if (y <= 270) {
-      doc.line(10, y, 200, y);
-      y += 6;
-    }
-  });
-
-  // Footer
-  if (y > 270) {
-    doc.addPage();
-    y = 20;
+    doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, y);
+    // Simpan PDF
+    doc.save(`Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`);
   }
-  doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, y);
-  y += 7;
-  doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, y);
-
-  // Konversi ke Data URL Base64
-  const pdfBase64 = doc.output('datauristring');
-
-  // Membuka PDF di browser luar aplikasi
-  window.open(pdfBase64, '_blank');
-}
 
   async function fetchMaterialList() {
     try {
@@ -464,11 +455,16 @@
 
   function submitAnswer() {
     saveCurrentAnswer();
+
+    const nextBtn = document.getElementById("nextButton");
+    nextBtn.disabled = true;
+
     if (currentQuestion === quizData.length - 1) {
-      showResult();
+      showResult(); // Hanya akan terpanggil 1x
     } else {
       currentQuestion++;
       loadQuestion();
+      nextBtn.disabled = false;
     }
   }
 
@@ -487,10 +483,14 @@
   }
 
   function showResult() {
+    if (isDataSent) return; // ⚠️ Cek apakah data sudah dikirim
+    isDataSent = true;
+
     calculateScore();
     document.getElementById("quizContainer").classList.add("d-none");
     document.getElementById("scoreContainer").classList.remove("d-none");
     document.getElementById("reviewContainer").classList.remove("d-none");
+
     document.getElementById("finalName").innerText = studentName;
     document.getElementById("finalScore").innerText = score;
     document.getElementById("totalScore").innerText = quizData.length;
@@ -498,6 +498,7 @@
     document.getElementById("finalScoreReview").innerText = score;
     document.getElementById("totalScoreReview").innerText = quizData.length;
     document.getElementById("finalPercentageReview").innerText = Math.round((score / quizData.length) * 100);
+
     clearInterval(timerInterval);
     sendFinalData();
     renderReview();
@@ -591,6 +592,7 @@
     document.getElementById("quizContainer").classList.add("d-none");
     document.getElementById("scoreContainer").classList.add("d-none");
     document.getElementById("reviewContainer").classList.add("d-none");
+    isDataSent = false; // Reset flag saat reload
   };
 </script>
 </body>

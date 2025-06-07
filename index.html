@@ -207,6 +207,7 @@
   let selectedSheet = "";
   let materialOptions = [];
   let kkmValue = 70; // Default jika gagal ambil dari sheet
+  let hasSubmitted = false; // Anti duplikasi pengiriman
 
   async function fetchKKM() {
     try {
@@ -250,7 +251,7 @@
     document.getElementById("finalStatusReview").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
 
     clearInterval(timerInterval);
-    sendFinalData();
+    sendFinalData(); // Hanya akan kirim sekali
     renderReview();
   }
 
@@ -527,6 +528,9 @@
   }
 
   function sendFinalData() {
+    if (hasSubmitted) return; // Jika sudah dikirim, stop
+    hasSubmitted = true; // Tandai bahwa sudah dikirim
+
     const formData = new FormData();
     formData.append("nama", studentName);
     formData.append("nilai", Math.round((score / quizData.length) * 100));
@@ -540,13 +544,15 @@
       }
       formData.append(`soal_${index + 1}`, displayText);
     });
+
     fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet1", {
       method: "POST",
       body: formData
     })
     .then(response => response.json())
     .catch(error => {
-      Swal.fire("Error!", "Gagal mengirim jawaban.", "error");
+      console.error("Gagal mengirim jawaban:", error);
+      Swal.fire("Peringatan!", "Ada masalah saat mengirim hasil.", "warning");
     });
   }
 

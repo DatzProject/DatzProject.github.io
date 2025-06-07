@@ -111,6 +111,16 @@
       background-color: #3b82f6;
       color: white;
     }
+
+    /* Status Kelulusan */
+    .status-lulus {
+      color: green;
+      font-weight: bold;
+    }
+    .status-tidak-lulus {
+      color: red;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
@@ -173,6 +183,7 @@
     <p><strong>Nama:</strong> <span id="finalName"></span></p>
     <p><strong>Jumlah Benar:</strong> <span id="finalScore"></span> dari <span id="totalScore"></span></p>
     <p><strong>Persentase:</strong> <span id="finalPercentage"></span>%</p>
+    <p><strong>Status:</strong> <span id="finalStatus" class="status-tidak-lulus"></span></p>
   </div>
   <!-- Review Jawaban -->
   <div id="reviewContainer" class="d-none">
@@ -180,6 +191,7 @@
     <div id="reviewList"></div>
     <p><strong>Jumlah Benar:</strong> <span id="finalScoreReview"></span> dari <span id="totalScoreReview"></span></p>
     <p><strong>Persentase:</strong> <span id="finalPercentageReview"></span>%</p>
+    <p><strong>Status:</strong> <span id="finalStatusReview" class="status-tidak-lulus"></span></p>
     <button class="btn btn-primary" onclick="redirectToHome()">Kembali ke Awal</button>
     <button class="btn btn-success mt-3" onclick="downloadReviewPDF()">Download Hasil Ujian (PDF)</button>
   </div>
@@ -195,21 +207,67 @@
   let studentDatabase = {};
   let selectedSheet = "";
   let materialOptions = [];
-  let isDataSent = false; // 👈 Flag untuk cegah kirim ulang data
+  let kkmValue = 70; // Default jika gagal ambil dari sheet
 
-  // === Fungsi untuk download hasil ujian sebagai PDF ===
+  async function fetchKKM() {
+    try {
+      const response = await fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet6");
+      const data = await response.json();
+      
+      if (data.length > 0 && data[0].KKM !== undefined) {
+        kkmValue = parseInt(data[0].KKM);
+        console.log("Nilai KKM berhasil diambil:", kkmValue);
+      } else {
+        console.warn("Data KKM tidak ditemukan, menggunakan default 70");
+      }
+    } catch (error) {
+      console.error("Gagal mengambil KKM dari Sheet6:", error);
+    }
+  }
+
+  async function showResult() {
+    calculateScore();
+    document.getElementById("quizContainer").classList.add("d-none");
+    document.getElementById("scoreContainer").classList.remove("d-none");
+    document.getElementById("reviewContainer").classList.remove("d-none");
+
+    const percentage = Math.round((score / quizData.length) * 100);
+    const statusText = percentage >= kkmValue ? "Lulus" : "Belum Lulus";
+
+    document.getElementById("finalName").innerText = studentName;
+    document.getElementById("finalScore").innerText = score;
+    document.getElementById("totalScore").innerText = quizData.length;
+    document.getElementById("finalPercentage").innerText = percentage;
+
+    document.getElementById("finalScoreReview").innerText = score;
+    document.getElementById("totalScoreReview").innerText = quizData.length;
+    document.getElementById("finalPercentageReview").innerText = percentage;
+
+    document.getElementById("finalStatus").innerText = statusText;
+    document.getElementById("finalStatusReview").innerText = statusText;
+
+    document.getElementById("finalStatus").className = percentage >= kkmValue ? "status-lulus" : "status-tidak-lulus";
+    document.getElementById("finalStatusReview").className = percentage >= kkmValue ? "status-lulus" : "status-tidak-lulus";
+
+    clearInterval(timerInterval);
+    sendFinalData();
+    renderReview();
+  }
+
   function downloadReviewPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
-    // Header
     doc.setFontSize(14);
     doc.text("Waktu Habis!", 10, 10);
     doc.text(`Nama: ${studentName}`, 10, 20);
     doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, 30);
     doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, 40);
+    const percentage = Math.round((score / quizData.length) * 100);
+    const statusText = percentage >= kkmValue ? "Lulus" : "Belum Lulus";
+    doc.text(`Status: ${statusText}`, 10, 50);
     doc.setFontSize(12);
-    doc.text("Review Jawaban", 10, 50);
-    let y = 60;
+    doc.text("Review Jawaban", 10, 60);
+    let y = 70;
     quizData.forEach((q, index) => {
       if (y > 270) {
         doc.addPage();
@@ -221,26 +279,20 @@
       if (answerKey) {
         answerText = `${answerKey}. ${q["OPSI " + answerKey]}`;
       }
-      // Soal
       doc.text(`Soal ${index + 1}: ${q.SOAL}`, 10, y);
       y += 7;
-      // Jawaban
       doc.text(`Jawaban Anda: ${answerText}`, 10, y);
       y += 6;
-      // Tanda benar/salah sebagai teks biasa
-      const statusText = correct ? "(Benar)" : "(Salah)";
-      const textColor = correct ? [0, 128, 0] : [255, 0, 0]; // hijau untuk benar, merah untuk salah
+      const textColor = correct ? [0, 128, 0] : [255, 0, 0];
       doc.setTextColor(...textColor);
-      doc.text(statusText, 190, y - 6, null, null, "right");
-      doc.setTextColor(0, 0, 0); // reset warna teks ke hitam
+      doc.text(correct ? "(Benar)" : "(Salah)", 190, y - 6, null, null, "right");
+      doc.setTextColor(0, 0, 0);
       y += 6;
-      // Garis pemisah
       if (y <= 270) {
         doc.line(10, y, 200, y);
         y += 6;
       }
     });
-    // Footer jumlah benar & persentase
     if (y > 270) {
       doc.addPage();
       y = 20;
@@ -248,7 +300,8 @@
     doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, y);
     y += 7;
     doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, y);
-    // Simpan PDF
+    y += 7;
+    doc.text(`Status: ${statusText}`, 10, y);
     doc.save(`Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`);
   }
 
@@ -263,7 +316,7 @@
         const btn = document.createElement("button");
         btn.className = "btn btn-outline-primary material-btn";
         btn.setAttribute("data-sheet", row["Nama Sheet"]);
-        btn.setAttribute("data-status", row.Status); // Simpan status
+        btn.setAttribute("data-status", row.Status);
         btn.textContent = row.MATERI;
         btn.onclick = () => selectMaterial(btn);
         container.appendChild(btn);
@@ -455,16 +508,11 @@
 
   function submitAnswer() {
     saveCurrentAnswer();
-
-    const nextBtn = document.getElementById("nextButton");
-    nextBtn.disabled = true;
-
     if (currentQuestion === quizData.length - 1) {
-      showResult(); // Hanya akan terpanggil 1x
+      showResult();
     } else {
       currentQuestion++;
       loadQuestion();
-      nextBtn.disabled = false;
     }
   }
 
@@ -480,28 +528,6 @@
     quizData.forEach((q, i) => {
       if (answers[i] === q.JAWABAN) score++;
     });
-  }
-
-  function showResult() {
-    if (isDataSent) return; // ⚠️ Cek apakah data sudah dikirim
-    isDataSent = true;
-
-    calculateScore();
-    document.getElementById("quizContainer").classList.add("d-none");
-    document.getElementById("scoreContainer").classList.remove("d-none");
-    document.getElementById("reviewContainer").classList.remove("d-none");
-
-    document.getElementById("finalName").innerText = studentName;
-    document.getElementById("finalScore").innerText = score;
-    document.getElementById("totalScore").innerText = quizData.length;
-    document.getElementById("finalPercentage").innerText = Math.round((score / quizData.length) * 100);
-    document.getElementById("finalScoreReview").innerText = score;
-    document.getElementById("totalScoreReview").innerText = quizData.length;
-    document.getElementById("finalPercentageReview").innerText = Math.round((score / quizData.length) * 100);
-
-    clearInterval(timerInterval);
-    sendFinalData();
-    renderReview();
   }
 
   function sendFinalData() {
@@ -584,7 +610,8 @@
     document.getElementById("materialSelection").classList.remove("d-none");
   }
 
-  window.onload = () => {
+  window.onload = async () => {
+    await fetchKKM(); // Ambil KKM dari Sheet6
     fetchMaterialList();
     fetchStudentList();
     document.getElementById("materialSelection").classList.remove("d-none");
@@ -592,7 +619,6 @@
     document.getElementById("quizContainer").classList.add("d-none");
     document.getElementById("scoreContainer").classList.add("d-none");
     document.getElementById("reviewContainer").classList.add("d-none");
-    isDataSent = false; // Reset flag saat reload
   };
 </script>
 </body>

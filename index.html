@@ -5,9 +5,9 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ujian Online</title>
   <!-- SweetAlert2 -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>  
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>   
   <!-- jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>  
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>   
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"  rel="stylesheet" />
   <style>
     body {
@@ -111,7 +111,6 @@
       background-color: #3b82f6;
       color: white;
     }
-
     /* Status Kelulusan */
     .status-lulus {
       color: green;
@@ -182,7 +181,7 @@
     <h2>Waktu Habis!</h2>
     <p><strong>Nama:</strong> <span id="finalName"></span></p>
     <p><strong>Jumlah Benar:</strong> <span id="finalScore"></span> dari <span id="totalScore"></span></p>
-    <p><strong>Persentase:</strong> <span id="finalPercentage"></span>%</p>
+    <p><strong>Nilai:</strong> <span id="finalScoreNumericResult"></span></p>
     <p><strong>Status:</strong> <span id="finalStatus" class="status-tidak-lulus"></span></p>
   </div>
   <!-- Review Jawaban -->
@@ -190,7 +189,7 @@
     <h2>Review Jawaban</h2>
     <div id="reviewList"></div>
     <p><strong>Jumlah Benar:</strong> <span id="finalScoreReview"></span> dari <span id="totalScoreReview"></span></p>
-    <p><strong>Persentase:</strong> <span id="finalPercentageReview"></span>%</p>
+    <p><strong>Nilai:</strong> <span id="finalScoreNumeric"></span></p>
     <p><strong>Status:</strong> <span id="finalStatusReview" class="status-tidak-lulus"></span></p>
     <button class="btn btn-primary" onclick="redirectToHome()">Kembali ke Awal</button>
     <button class="btn btn-success mt-3" onclick="downloadReviewPDF()">Download Hasil Ujian (PDF)</button>
@@ -213,7 +212,6 @@
     try {
       const response = await fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet6");
       const data = await response.json();
-      
       if (data.length > 0 && data[0].KKM !== undefined) {
         kkmValue = parseInt(data[0].KKM);
         console.log("Nilai KKM berhasil diambil:", kkmValue);
@@ -231,23 +229,25 @@
     document.getElementById("scoreContainer").classList.remove("d-none");
     document.getElementById("reviewContainer").classList.remove("d-none");
 
-    const percentage = Math.round((score / quizData.length) * 100);
-    const statusText = percentage >= kkmValue ? "Lulus" : "Belum Lulus";
+    const numericScore = Math.round((score / quizData.length) * 100); // Skala 1–100
+    const statusText = numericScore >= kkmValue ? "Lulus" : "Belum Lulus";
 
+    // Update hasil ujian
     document.getElementById("finalName").innerText = studentName;
     document.getElementById("finalScore").innerText = score;
     document.getElementById("totalScore").innerText = quizData.length;
-    document.getElementById("finalPercentage").innerText = percentage;
+    document.getElementById("finalScoreNumericResult").innerText = numericScore;
+    document.getElementById("finalStatus").innerText = statusText;
 
+    // Update review jawaban
     document.getElementById("finalScoreReview").innerText = score;
     document.getElementById("totalScoreReview").innerText = quizData.length;
-    document.getElementById("finalPercentageReview").innerText = percentage;
-
-    document.getElementById("finalStatus").innerText = statusText;
+    document.getElementById("finalScoreNumeric").innerText = numericScore;
     document.getElementById("finalStatusReview").innerText = statusText;
 
-    document.getElementById("finalStatus").className = percentage >= kkmValue ? "status-lulus" : "status-tidak-lulus";
-    document.getElementById("finalStatusReview").className = percentage >= kkmValue ? "status-lulus" : "status-tidak-lulus";
+    // Warna teks
+    document.getElementById("finalStatus").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
+    document.getElementById("finalStatusReview").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
 
     clearInterval(timerInterval);
     sendFinalData();
@@ -257,13 +257,13 @@
   function downloadReviewPDF() {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF();
+    const numericScore = Math.round((score / quizData.length) * 100);
+    const statusText = numericScore >= kkmValue ? "Lulus" : "Belum Lulus";
     doc.setFontSize(14);
     doc.text("Waktu Habis!", 10, 10);
     doc.text(`Nama: ${studentName}`, 10, 20);
     doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, 30);
-    doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, 40);
-    const percentage = Math.round((score / quizData.length) * 100);
-    const statusText = percentage >= kkmValue ? "Lulus" : "Belum Lulus";
+    doc.text(`Nilai: ${numericScore}`, 10, 40);
     doc.text(`Status: ${statusText}`, 10, 50);
     doc.setFontSize(12);
     doc.text("Review Jawaban", 10, 60);
@@ -299,7 +299,7 @@
     }
     doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, y);
     y += 7;
-    doc.text(`Persentase: ${Math.round((score / quizData.length) * 100)}%`, 10, y);
+    doc.text(`Nilai: ${numericScore}`, 10, y);
     y += 7;
     doc.text(`Status: ${statusText}`, 10, y);
     doc.save(`Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`);
@@ -346,9 +346,7 @@
         text: "UJIAN TIDAK BISA DIAKSES",
         icon: "error",
         confirmButtonText: "OK"
-      }).then(() => {
-        location.reload(); // Reload halaman setelah klik OK
-      });
+      }).then(() => location.reload());
       return;
     }
     document.getElementById("materialSelection").classList.add("d-none");
@@ -478,14 +476,12 @@
       return;
     }
     const data = quizData[currentQuestion];
-    const questionElement = document.getElementById("question");
+    document.getElementById("question").innerText = data.SOAL;
     const imageContainer = document.getElementById("imageContainer");
-    questionElement.innerText = data.SOAL;
     imageContainer.innerHTML = "";
     if (data.GAMBAR) {
       const img = document.createElement("img");
       img.src = data.GAMBAR;
-      img.alt = "Gambar Soal";
       img.style.maxWidth = "30%";
       img.style.marginTop = "10px";
       img.style.borderRadius = "8px";
@@ -533,16 +529,14 @@
   function sendFinalData() {
     const formData = new FormData();
     formData.append("nama", studentName);
-    formData.append("nilai", score);
-    formData.append("persentase", Math.round((score / quizData.length) * 100));
+    formData.append("nilai", Math.round((score / quizData.length) * 100));
     formData.append("bab", selectedSheet);
     formData.append("timestamp", new Date().toLocaleString());
     quizData.forEach((q, index) => {
       const answer = answers[index];
       let displayText = "Tidak dijawab";
       if (answer) {
-        const answerLabel = q[`OPSI ${answer}`];
-        displayText = `${answer}. ${answerLabel}`;
+        displayText = `${answer}. ${q[`OPSI ${answer}`]}`;
       }
       formData.append(`soal_${index + 1}`, displayText);
     });

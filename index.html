@@ -5,11 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ujian Online</title>
   <!-- SweetAlert2 -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>   
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    
   <!-- jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>   
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>    
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"  rel="stylesheet" />
   <style>
+    /* [tetap seperti sebelumnya] */
     body {
       font-family: Arial, sans-serif;
       background-color: #f8f9fa;
@@ -127,10 +128,26 @@
   <!-- Halaman Pemilihan Materi -->
   <div id="materialSelection" class="text-center">
     <h2>Pilih Materi Ujian</h2>
-    <p>Silakan pilih bab yang akan dikerjakan:</p>
-    <div id="materialList" class="btn-group-vertical w-100 mb-3"></div>
+    <p>Silakan pilih mata pelajaran, bab, dan tujuan pembelajaran:</p>
+
+    <div class="form-group text-left">
+      <label for="mapelSelect">Mata Pelajaran:</label>
+      <select id="mapelSelect" class="form-control"></select>
+    </div>
+
+    <div class="form-group text-left">
+      <label for="babSelect">Bab:</label>
+      <select id="babSelect" class="form-control" disabled></select>
+    </div>
+
+    <div class="form-group text-left">
+      <label for="tpSelect">Tujuan Pembelajaran:</label>
+      <select id="tpSelect" class="form-control" disabled></select>
+    </div>
+
     <button class="btn btn-primary" id="btnConfirmMaterial" disabled onclick="goToNameForm()">Lanjut ke Identitas</button>
   </div>
+
   <!-- Form Input Nama dan NISN -->
   <div id="nameForm" class="d-none">
     <h2>Masukkan Identitas Anda</h2>
@@ -146,6 +163,7 @@
       <button id="btnStartQuiz" class="btn btn-primary" disabled onclick="startQuiz()">Mulai Ujian</button>
     </div>
   </div>
+
   <!-- Soal Ujian -->
   <div id="quizContainer" class="d-none">
     <div class="question-header">
@@ -176,6 +194,7 @@
     </form>
     <div class="navigation-buttons" id="navigationButtons"></div>
   </div>
+
   <!-- Hasil Ujian -->
   <div id="scoreContainer" class="d-none text-center">
     <h2>Waktu Habis!</h2>
@@ -184,6 +203,7 @@
     <p><strong>Nilai:</strong> <span id="finalScoreNumericResult"></span></p>
     <p><strong>Status:</strong> <span id="finalStatus" class="status-tidak-lulus"></span></p>
   </div>
+
   <!-- Review Jawaban -->
   <div id="reviewContainer" class="d-none">
     <h2>Review Jawaban</h2>
@@ -206,8 +226,9 @@
   let studentDatabase = {};
   let selectedSheet = "";
   let materialOptions = [];
-  let kkmValue = 70; // Default jika gagal ambil dari sheet
-  let hasSubmitted = false; // Anti duplikasi pengiriman
+  let groupedData = {};
+  let kkmValue = 70;
+  let hasSubmitted = false;
 
   async function fetchKKM() {
     try {
@@ -215,132 +236,104 @@
       const data = await response.json();
       if (data.length > 0 && data[0].KKM !== undefined) {
         kkmValue = parseInt(data[0].KKM);
-        console.log("Nilai KKM berhasil diambil:", kkmValue);
-      } else {
-        console.warn("Data KKM tidak ditemukan, menggunakan default 70");
       }
     } catch (error) {
-      console.error("Gagal mengambil KKM dari Sheet6:", error);
+      console.error("Gagal mengambil KKM:", error);
     }
-  }
-
-  async function showResult() {
-    calculateScore();
-    document.getElementById("quizContainer").classList.add("d-none");
-    document.getElementById("scoreContainer").classList.remove("d-none");
-    document.getElementById("reviewContainer").classList.remove("d-none");
-
-    const numericScore = Math.round((score / quizData.length) * 100); // Skala 1–100
-    const statusText = numericScore >= kkmValue ? "Lulus" : "Belum Lulus";
-
-    // Update hasil ujian
-    document.getElementById("finalName").innerText = studentName;
-    document.getElementById("finalScore").innerText = score;
-    document.getElementById("totalScore").innerText = quizData.length;
-    document.getElementById("finalScoreNumericResult").innerText = numericScore;
-    document.getElementById("finalStatus").innerText = statusText;
-
-    // Update review jawaban
-    document.getElementById("finalScoreReview").innerText = score;
-    document.getElementById("totalScoreReview").innerText = quizData.length;
-    document.getElementById("finalScoreNumeric").innerText = numericScore;
-    document.getElementById("finalStatusReview").innerText = statusText;
-
-    // Warna teks
-    document.getElementById("finalStatus").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
-    document.getElementById("finalStatusReview").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
-
-    clearInterval(timerInterval);
-    sendFinalData(); // Hanya akan kirim sekali
-    renderReview();
-  }
-
-  function downloadReviewPDF() {
-    const { jsPDF } = window.jspdf;
-    const doc = new jsPDF();
-    const numericScore = Math.round((score / quizData.length) * 100);
-    const statusText = numericScore >= kkmValue ? "Lulus" : "Belum Lulus";
-    doc.setFontSize(14);
-    doc.text("Waktu Habis!", 10, 10);
-    doc.text(`Nama: ${studentName}`, 10, 20);
-    doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, 30);
-    doc.text(`Nilai: ${numericScore}`, 10, 40);
-    doc.text(`Status: ${statusText}`, 10, 50);
-    doc.setFontSize(12);
-    doc.text("Review Jawaban", 10, 60);
-    let y = 70;
-    quizData.forEach((q, index) => {
-      if (y > 270) {
-        doc.addPage();
-        y = 20;
-      }
-      const answerKey = answers[index];
-      const correct = answerKey === q.JAWABAN;
-      let answerText = "Tidak dijawab";
-      if (answerKey) {
-        answerText = `${answerKey}. ${q["OPSI " + answerKey]}`;
-      }
-      doc.text(`Soal ${index + 1}: ${q.SOAL}`, 10, y);
-      y += 7;
-      doc.text(`Jawaban Anda: ${answerText}`, 10, y);
-      y += 6;
-      const textColor = correct ? [0, 128, 0] : [255, 0, 0];
-      doc.setTextColor(...textColor);
-      doc.text(correct ? "(Benar)" : "(Salah)", 190, y - 6, null, null, "right");
-      doc.setTextColor(0, 0, 0);
-      y += 6;
-      if (y <= 270) {
-        doc.line(10, y, 200, y);
-        y += 6;
-      }
-    });
-    if (y > 270) {
-      doc.addPage();
-      y = 20;
-    }
-    doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, y);
-    y += 7;
-    doc.text(`Nilai: ${numericScore}`, 10, y);
-    y += 7;
-    doc.text(`Status: ${statusText}`, 10, y);
-    doc.save(`Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`);
   }
 
   async function fetchMaterialList() {
     try {
       const response = await fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet5");
       const data = await response.json();
-      materialOptions = data.filter(row => row.MATERI && row["Nama Sheet"] && row.Status);
-      const container = document.getElementById("materialList");
-      container.innerHTML = "";
-      materialOptions.forEach((row, index) => {
-        const btn = document.createElement("button");
-        btn.className = "btn btn-outline-primary material-btn";
-        btn.setAttribute("data-sheet", row["Nama Sheet"]);
-        btn.setAttribute("data-status", row.Status);
-        btn.textContent = row.MATERI;
-        btn.onclick = () => selectMaterial(btn);
-        container.appendChild(btn);
+
+      materialOptions = data.filter(row => row.MAPEL && row.MATERI && row.TP && row["Nama Sheet"] && row.Status);
+
+      groupedData = {};
+      materialOptions.forEach(row => {
+        if (!groupedData[row.MAPEL]) groupedData[row.MAPEL] = {};
+        if (!groupedData[row.MAPEL][row.MATERI]) groupedData[row.MAPEL][row.MATERI] = [];
+        groupedData[row.MAPEL][row.MATERI].push(row);
       });
+
+      populateMapelDropdown();
     } catch (error) {
       Swal.fire("Error!", "Gagal mengambil daftar materi.", "error");
     }
   }
 
-  function selectMaterial(btn) {
-    document.querySelectorAll('.material-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    selectedSheet = btn.getAttribute('data-sheet');
-    document.getElementById('btnConfirmMaterial').disabled = false;
+  function populateMapelDropdown() {
+    const mapelSelect = document.getElementById("mapelSelect");
+    mapelSelect.innerHTML = '<option value="">-- Pilih Mata Pelajaran --</option>';
+    Object.keys(groupedData).forEach(mapel => {
+      const option = document.createElement("option");
+      option.value = mapel;
+      option.textContent = mapel;
+      mapelSelect.appendChild(option);
+    });
+    mapelSelect.addEventListener("change", handleMapelChange);
+  }
+
+  function handleMapelChange(e) {
+    const selectedMapel = e.target.value;
+    const babSelect = document.getElementById("babSelect");
+    const tpSelect = document.getElementById("tpSelect");
+
+    tpSelect.disabled = true;
+    tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
+
+    if (!selectedMapel || !groupedData[selectedMapel]) return;
+
+    babSelect.disabled = false;
+    babSelect.innerHTML = '<option value="">-- Pilih Bab --</option>';
+    Object.keys(groupedData[selectedMapel]).forEach(bab => {
+      const option = document.createElement("option");
+      option.value = bab;
+      option.textContent = bab;
+      babSelect.appendChild(option);
+    });
+
+    babSelect.value = "";
+    tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
+    babSelect.addEventListener("change", () => handleBabChange(selectedMapel));
+  }
+
+  function handleBabChange(selectedMapel) {
+    const selectedBab = document.getElementById("babSelect").value;
+    const tpSelect = document.getElementById("tpSelect");
+
+    if (!selectedBab || !groupedData[selectedMapel][selectedBab]) return;
+
+    tpSelect.disabled = false;
+    tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
+
+    groupedData[selectedMapel][selectedBab].forEach(row => {
+      const option = document.createElement("option");
+      option.value = row.TP;
+      option.textContent = row.TP;
+      option.setAttribute("data-sheet", row["Nama Sheet"]);
+      option.setAttribute("data-status", row.Status);
+      tpSelect.appendChild(option);
+    });
+
+    tpSelect.addEventListener("change", enableConfirmButton);
+  }
+
+  function enableConfirmButton() {
+    const selectedTp = document.getElementById("tpSelect").value;
+    document.getElementById("btnConfirmMaterial").disabled = !selectedTp;
   }
 
   function goToNameForm() {
-    if (!selectedSheet) {
-      Swal.fire("Error!", "Silakan pilih materi terlebih dahulu.", "error");
+    const tpSelect = document.getElementById("tpSelect");
+    const selectedOption = tpSelect.options[tpSelect.selectedIndex];
+
+    if (!selectedOption) {
+      Swal.fire("Error!", "Silakan pilih TP terlebih dahulu.", "error");
       return;
     }
-    const activeBtn = document.querySelector('.material-btn.active');
-    const status = activeBtn.getAttribute('data-status');
+
+    const status = selectedOption.getAttribute("data-status");
     if (status === "Tidak diizinkan") {
       Swal.fire({
         title: "Akses Ditolak!",
@@ -350,6 +343,9 @@
       }).then(() => location.reload());
       return;
     }
+
+    selectedSheet = selectedOption.getAttribute("data-sheet");
+
     document.getElementById("materialSelection").classList.add("d-none");
     document.getElementById("nameForm").classList.remove("d-none");
   }
@@ -527,10 +523,29 @@
     });
   }
 
-  function sendFinalData() {
-    if (hasSubmitted) return; // Jika sudah dikirim, stop
-    hasSubmitted = true; // Tandai bahwa sudah dikirim
+  async function showResult() {
+    calculateScore();
+    document.getElementById("quizContainer").classList.add("d-none");
+    document.getElementById("scoreContainer").classList.remove("d-none");
+    document.getElementById("reviewContainer").classList.remove("d-none");
+    const numericScore = Math.round((score / quizData.length) * 100);
+    const statusText = numericScore >= kkmValue ? "Lulus" : "Belum Lulus";
+    document.getElementById("finalName").innerText = studentName;
+    document.getElementById("finalScore").innerText = score;
+    document.getElementById("totalScore").innerText = quizData.length;
+    document.getElementById("finalScoreNumericResult").innerText = numericScore;
+    document.getElementById("finalStatus").innerText = statusText;
+    document.getElementById("finalStatus").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
+    document.getElementById("finalStatusReview").innerText = statusText;
+    document.getElementById("finalStatusReview").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
+    clearInterval(timerInterval);
+    sendFinalData();
+    renderReview();
+  }
 
+  function sendFinalData() {
+    if (hasSubmitted) return;
+    hasSubmitted = true;
     const formData = new FormData();
     formData.append("nama", studentName);
     formData.append("nilai", Math.round((score / quizData.length) * 100));
@@ -544,30 +559,14 @@
       }
       formData.append(`soal_${index + 1}`, displayText);
     });
-
     fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet1", {
       method: "POST",
       body: formData
     })
-    .then(response => response.json())
     .catch(error => {
-      console.error("Gagal mengirim jawaban:", error);
+      console.error("Gagal mengirim hasil:", error);
       Swal.fire("Peringatan!", "Ada masalah saat mengirim hasil.", "warning");
     });
-  }
-
-  function startTimer(duration) {
-    let timer = duration, minutes, seconds;
-    document.getElementById("timer").innerText = `Waktu: 2:00`;
-    timerInterval = setInterval(() => {
-      minutes = parseInt(timer / 60, 10);
-      seconds = parseInt(timer % 60, 10);
-      document.getElementById("timer").innerText = `Waktu: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
-      if (--timer < 0) {
-        clearInterval(timerInterval);
-        showResult();
-      }
-    }, 1000);
   }
 
   function renderReview() {
@@ -597,6 +596,71 @@
     });
   }
 
+  function downloadReviewPDF() {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+    const numericScore = Math.round((score / quizData.length) * 100);
+    const statusText = numericScore >= kkmValue ? "Lulus" : "Belum Lulus";
+    doc.setFontSize(14);
+    doc.text("Waktu Habis!", 10, 10);
+    doc.text(`Nama: ${studentName}`, 10, 20);
+    doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, 30);
+    doc.text(`Nilai: ${numericScore}`, 10, 40);
+    doc.text(`Status: ${statusText}`, 10, 50);
+    doc.setFontSize(12);
+    doc.text("Review Jawaban", 10, 60);
+    let y = 70;
+    quizData.forEach((q, index) => {
+      if (y > 270) {
+        doc.addPage();
+        y = 20;
+      }
+      const answerKey = answers[index];
+      const correct = answerKey === q.JAWABAN;
+      let answerText = "Tidak dijawab";
+      if (answerKey) {
+        answerText = `${answerKey}. ${q["OPSI " + answerKey]}`;
+      }
+      doc.text(`Soal ${index + 1}: ${q.SOAL}`, 10, y);
+      y += 7;
+      doc.text(`Jawaban Anda: ${answerText}`, 10, y);
+      y += 6;
+      const textColor = correct ? [0, 128, 0] : [255, 0, 0];
+      doc.setTextColor(...textColor);
+      doc.text(correct ? "(Benar)" : "(Salah)", 190, y - 6, null, null, "right");
+      doc.setTextColor(0, 0, 0);
+      y += 6;
+      if (y <= 270) {
+        doc.line(10, y, 200, y);
+        y += 6;
+      }
+    });
+    if (y > 270) {
+      doc.addPage();
+      y = 20;
+    }
+    doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, y);
+    y += 7;
+    doc.text(`Nilai: ${numericScore}`, 10, y);
+    y += 7;
+    doc.text(`Status: ${statusText}`, 10, y);
+    doc.save(`Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`);
+  }
+
+  function startTimer(duration) {
+    let timer = duration, minutes, seconds;
+    document.getElementById("timer").innerText = `Waktu: 2:00`;
+    timerInterval = setInterval(() => {
+      minutes = parseInt(timer / 60, 10);
+      seconds = parseInt(timer % 60, 10);
+      document.getElementById("timer").innerText = `Waktu: ${minutes}:${seconds < 10 ? "0" : ""}${seconds}`;
+      if (--timer < 0) {
+        clearInterval(timerInterval);
+        showResult();
+      }
+    }, 1000);
+  }
+
   function redirectToHome() {
     location.reload();
   }
@@ -611,7 +675,7 @@
   }
 
   window.onload = async () => {
-    await fetchKKM(); // Ambil KKM dari Sheet6
+    await fetchKKM();
     fetchMaterialList();
     fetchStudentList();
     document.getElementById("materialSelection").classList.remove("d-none");

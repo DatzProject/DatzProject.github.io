@@ -275,49 +275,66 @@
   }
 
   function handleMapelChange(e) {
-    const selectedMapel = e.target.value;
-    const babSelect = document.getElementById("babSelect");
-    const tpSelect = document.getElementById("tpSelect");
+  const selectedMapel = e.target.value;
+  const babSelect = document.getElementById("babSelect");
+  const tpSelect = document.getElementById("tpSelect");
+  const btnConfirm = document.getElementById("btnConfirmMaterial");
 
-    tpSelect.disabled = true;
-    tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
+  // Reset Bab dan TP dropdown
+  tpSelect.disabled = true;
+  tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
+  
+  babSelect.disabled = true;
+  babSelect.innerHTML = '<option value="">-- Pilih Bab --</option>';
 
-    if (!selectedMapel || !groupedData[selectedMapel]) return;
+  btnConfirm.disabled = true; // Disable tombol "Lanjut ke Identitas"
 
-    babSelect.disabled = false;
-    babSelect.innerHTML = '<option value="">-- Pilih Bab --</option>';
-    Object.keys(groupedData[selectedMapel]).forEach(bab => {
-      const option = document.createElement("option");
-      option.value = bab;
-      option.textContent = bab;
-      babSelect.appendChild(option);
-    });
+  if (!selectedMapel || !groupedData[selectedMapel]) return;
 
-    babSelect.value = "";
-    tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
-    babSelect.addEventListener("change", () => handleBabChange(selectedMapel));
-  }
+  // Isi dropdown Bab
+  babSelect.disabled = false;
+  babSelect.innerHTML = '<option value="">-- Pilih Bab --</option>';
+  Object.keys(groupedData[selectedMapel]).forEach(bab => {
+    const option = document.createElement("option");
+    option.value = bab;
+    option.textContent = bab;
+    babSelect.appendChild(option);
+  });
+  babSelect.value = "";
+
+  // Tambahkan event listener untuk perubahan Bab
+  babSelect.onchange = () => handleBabChange(selectedMapel);
+}
 
   function handleBabChange(selectedMapel) {
-    const selectedBab = document.getElementById("babSelect").value;
-    const tpSelect = document.getElementById("tpSelect");
+  const selectedBab = document.getElementById("babSelect").value;
+  const tpSelect = document.getElementById("tpSelect");
+  const btnConfirm = document.getElementById("btnConfirmMaterial");
 
-    if (!selectedBab || !groupedData[selectedMapel][selectedBab]) return;
-
-    tpSelect.disabled = false;
+  // Jika Bab diubah kembali ke "-- Pilih Bab --"
+  if (!selectedBab) {
+    tpSelect.disabled = true;
     tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
-
-    groupedData[selectedMapel][selectedBab].forEach(row => {
-      const option = document.createElement("option");
-      option.value = row.TP;
-      option.textContent = row.TP;
-      option.setAttribute("data-sheet", row["Nama Sheet"]);
-      option.setAttribute("data-status", row.Status);
-      tpSelect.appendChild(option);
-    });
-
-    tpSelect.addEventListener("change", enableConfirmButton);
+    btnConfirm.disabled = true; // Disable tombol lanjut
+    return;
   }
+
+  // Jika Bab valid dipilih
+  if (!groupedData[selectedMapel][selectedBab]) return;
+
+  tpSelect.disabled = false;
+  tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
+  groupedData[selectedMapel][selectedBab].forEach(row => {
+    const option = document.createElement("option");
+    option.value = row.TP;
+    option.textContent = row.TP;
+    option.setAttribute("data-sheet", row["Nama Sheet"]);
+    option.setAttribute("data-status", row.Status);
+    tpSelect.appendChild(option);
+  });
+
+  tpSelect.addEventListener("change", enableConfirmButton);
+}
 
   function enableConfirmButton() {
     const selectedTp = document.getElementById("tpSelect").value;

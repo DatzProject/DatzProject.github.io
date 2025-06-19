@@ -5,12 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ujian Online</title>
   <!-- SweetAlert2 -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>    
+  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>     
   <!-- jsPDF -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>    
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>     
   <link href="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css"  rel="stylesheet" />
   <style>
-    /* [tetap seperti sebelumnya] */
     body {
       font-family: Arial, sans-serif;
       background-color: #f8f9fa;
@@ -129,22 +128,18 @@
   <div id="materialSelection" class="text-center">
     <h2>Pilih Materi Ujian</h2>
     <p>Silakan pilih mata pelajaran, bab, dan tujuan pembelajaran:</p>
-
     <div class="form-group text-left">
       <label for="mapelSelect">Mata Pelajaran:</label>
       <select id="mapelSelect" class="form-control"></select>
     </div>
-
     <div class="form-group text-left">
       <label for="babSelect">Bab:</label>
       <select id="babSelect" class="form-control" disabled></select>
     </div>
-
     <div class="form-group text-left">
       <label for="tpSelect">Tujuan Pembelajaran:</label>
       <select id="tpSelect" class="form-control" disabled></select>
     </div>
-
     <button class="btn btn-primary" id="btnConfirmMaterial" disabled onclick="goToNameForm()">Lanjut ke Identitas</button>
   </div>
 
@@ -158,6 +153,16 @@
     <label for="studentNisn" class="mt-2">NISN:</label>
     <input type="text" id="studentNisn" class="form-control" placeholder="Masukkan NISN" />
     <div id="errorNisn" class="error-text d-none"></div>
+
+    <!-- TAMBAHAN: Jenis Ujian -->
+    <label for="jenisUjian" class="mt-2">Jenis Ujian:</label>
+    <select id="jenisUjian" class="form-control" disabled>
+      <option value="">-- Pilih Jenis Ujian --</option>
+      <option value="UTAMA">UTAMA</option>
+      <option value="REMEDIAL">REMEDIAL</option>
+    </select>
+    <div id="errorJenisUjian" class="error-text d-none"></div>
+
     <div class="d-flex justify-content-between mt-3">
       <button id="btnBackToMaterial" class="btn btn-secondary" onclick="backToMaterialSelection()">Kembali</button>
       <button id="btnStartQuiz" class="btn btn-primary" disabled onclick="startQuiz()">Mulai Ujian</button>
@@ -202,15 +207,23 @@
     <p><strong>Jumlah Benar:</strong> <span id="finalScore"></span> dari <span id="totalScore"></span></p>
     <p><strong>Nilai:</strong> <span id="finalScoreNumericResult"></span></p>
     <p><strong>Status:</strong> <span id="finalStatus" class="status-tidak-lulus"></span></p>
+    <p><strong>Jenis Ujian:</strong> <span id="finalJenisUjian"></span></p>
+    <p><strong>Mata Pelajaran:</strong> <span id="finalMapel"></span></p>
+    <p><strong>Bab:</strong> <span id="finalBab"></span></p>
+    <p><strong>Tujuan Pembelajaran:</strong> <span id="finalTp"></span></p>
   </div>
 
   <!-- Review Jawaban -->
   <div id="reviewContainer" class="d-none">
     <h2>Review Jawaban</h2>
     <div id="reviewList"></div>
-    <p><strong></strong> <span id="finalScoreReview"></span>  <span id="totalScoreReview"></span></p>
-    <p><strong></strong> <span id="finalScoreNumeric"></span></p>
-    <p><strong></strong> <span id="finalStatusReview"></span></p>
+    <p><strong>Jumlah Benar:</strong> <span id="finalScoreReview"></span> dari <span id="totalScoreReview"></span></p>
+    <p><strong>Nilai:</strong> <span id="finalScoreNumeric"></span></p>
+    <p><strong>Status:</strong> <span id="finalStatusReview"></span></p>
+    <p><strong>Jenis Ujian:</strong> <span id="finalJenisUjianReview"></span></p>
+    <p><strong>Mata Pelajaran:</strong> <span id="finalMapelReview"></span></p>
+    <p><strong>Bab:</strong> <span id="finalBabReview"></span></p>
+    <p><strong>Tujuan Pembelajaran:</strong> <span id="finalTpReview"></span></p>
     <button class="btn btn-primary" onclick="redirectToHome()">Kembali ke Awal</button>
     <button class="btn btn-success mt-3" onclick="downloadReviewPDF()">Download Hasil Ujian (PDF)</button>
   </div>
@@ -230,6 +243,11 @@
   let kkmValue = 70;
   let hasSubmitted = false;
 
+  // Tambahkan variabel baru
+  let selectedMapel = "";
+  let selectedBab = "";
+  let selectedTp = "";
+
   async function fetchKKM() {
     try {
       const response = await fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet6");
@@ -246,16 +264,13 @@
     try {
       const response = await fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet5");
       const data = await response.json();
-
       materialOptions = data.filter(row => row.MAPEL && row.MATERI && row.TP && row["Nama Sheet"] && row.Status);
-
       groupedData = {};
       materialOptions.forEach(row => {
         if (!groupedData[row.MAPEL]) groupedData[row.MAPEL] = {};
         if (!groupedData[row.MAPEL][row.MATERI]) groupedData[row.MAPEL][row.MATERI] = [];
         groupedData[row.MAPEL][row.MATERI].push(row);
       });
-
       populateMapelDropdown();
     } catch (error) {
       Swal.fire("Error!", "Gagal mengambil daftar materi.", "error");
@@ -275,66 +290,57 @@
   }
 
   function handleMapelChange(e) {
-  const selectedMapel = e.target.value;
-  const babSelect = document.getElementById("babSelect");
-  const tpSelect = document.getElementById("tpSelect");
-  const btnConfirm = document.getElementById("btnConfirmMaterial");
+    const selectedMapel = e.target.value;
+    const babSelect = document.getElementById("babSelect");
+    const tpSelect = document.getElementById("tpSelect");
+    const btnConfirm = document.getElementById("btnConfirmMaterial");
 
-  // Reset Bab dan TP dropdown
-  tpSelect.disabled = true;
-  tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
-  
-  babSelect.disabled = true;
-  babSelect.innerHTML = '<option value="">-- Pilih Bab --</option>';
-
-  btnConfirm.disabled = true; // Disable tombol "Lanjut ke Identitas"
-
-  if (!selectedMapel || !groupedData[selectedMapel]) return;
-
-  // Isi dropdown Bab
-  babSelect.disabled = false;
-  babSelect.innerHTML = '<option value="">-- Pilih Bab --</option>';
-  Object.keys(groupedData[selectedMapel]).forEach(bab => {
-    const option = document.createElement("option");
-    option.value = bab;
-    option.textContent = bab;
-    babSelect.appendChild(option);
-  });
-  babSelect.value = "";
-
-  // Tambahkan event listener untuk perubahan Bab
-  babSelect.onchange = () => handleBabChange(selectedMapel);
-}
-
-  function handleBabChange(selectedMapel) {
-  const selectedBab = document.getElementById("babSelect").value;
-  const tpSelect = document.getElementById("tpSelect");
-  const btnConfirm = document.getElementById("btnConfirmMaterial");
-
-  // Jika Bab diubah kembali ke "-- Pilih Bab --"
-  if (!selectedBab) {
     tpSelect.disabled = true;
     tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
-    btnConfirm.disabled = true; // Disable tombol lanjut
-    return;
+    babSelect.disabled = true;
+    babSelect.innerHTML = '<option value="">-- Pilih Bab --</option>';
+    btnConfirm.disabled = true;
+
+    if (!selectedMapel || !groupedData[selectedMapel]) return;
+
+    babSelect.disabled = false;
+    babSelect.innerHTML = '<option value="">-- Pilih Bab --</option>';
+    Object.keys(groupedData[selectedMapel]).forEach(bab => {
+      const option = document.createElement("option");
+      option.value = bab;
+      option.textContent = bab;
+      babSelect.appendChild(option);
+    });
+    babSelect.value = "";
+    babSelect.onchange = () => handleBabChange(selectedMapel);
   }
 
-  // Jika Bab valid dipilih
-  if (!groupedData[selectedMapel][selectedBab]) return;
+  function handleBabChange(selectedMapel) {
+    const selectedBab = document.getElementById("babSelect").value;
+    const tpSelect = document.getElementById("tpSelect");
+    const btnConfirm = document.getElementById("btnConfirmMaterial");
 
-  tpSelect.disabled = false;
-  tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
-  groupedData[selectedMapel][selectedBab].forEach(row => {
-    const option = document.createElement("option");
-    option.value = row.TP;
-    option.textContent = row.TP;
-    option.setAttribute("data-sheet", row["Nama Sheet"]);
-    option.setAttribute("data-status", row.Status);
-    tpSelect.appendChild(option);
-  });
+    if (!selectedBab) {
+      tpSelect.disabled = true;
+      tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
+      btnConfirm.disabled = true;
+      return;
+    }
 
-  tpSelect.addEventListener("change", enableConfirmButton);
-}
+    if (!groupedData[selectedMapel][selectedBab]) return;
+
+    tpSelect.disabled = false;
+    tpSelect.innerHTML = '<option value="">-- Pilih TP --</option>';
+    groupedData[selectedMapel][selectedBab].forEach(row => {
+      const option = document.createElement("option");
+      option.value = row.TP;
+      option.textContent = row.TP;
+      option.setAttribute("data-sheet", row["Nama Sheet"]);
+      option.setAttribute("data-status", row.Status);
+      tpSelect.appendChild(option);
+    });
+    tpSelect.addEventListener("change", enableConfirmButton);
+  }
 
   function enableConfirmButton() {
     const selectedTp = document.getElementById("tpSelect").value;
@@ -344,7 +350,6 @@
   function goToNameForm() {
     const tpSelect = document.getElementById("tpSelect");
     const selectedOption = tpSelect.options[tpSelect.selectedIndex];
-
     if (!selectedOption) {
       Swal.fire("Error!", "Silakan pilih TP terlebih dahulu.", "error");
       return;
@@ -362,6 +367,9 @@
     }
 
     selectedSheet = selectedOption.getAttribute("data-sheet");
+    selectedMapel = document.getElementById("mapelSelect").value;
+    selectedBab = document.getElementById("babSelect").value;
+    selectedTp = selectedOption.value;
 
     document.getElementById("materialSelection").classList.add("d-none");
     document.getElementById("nameForm").classList.remove("d-none");
@@ -371,9 +379,11 @@
     try {
       const response = await fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet3");
       const studentList = await response.json();
+
       const select = document.getElementById("studentName");
       select.innerHTML = '<option value="">-- Pilih Nama --</option>';
       studentDatabase = {};
+
       studentList.forEach(student => {
         if (student.NAMA_SISWA && student.NISN) {
           const option = document.createElement("option");
@@ -383,10 +393,29 @@
           studentDatabase[student.NAMA_SISWA] = student.NISN.toString();
         }
       });
+
       const nameSelect = document.getElementById("studentName");
       const nisnInput = document.getElementById("studentNisn");
       nameSelect.addEventListener("change", validateNisn);
       nisnInput.addEventListener("input", validateNisn);
+
+      // Validasi jenis ujian
+      const jenisUjian = document.getElementById("jenisUjian");
+      jenisUjian.addEventListener("change", () => {
+        const selected = jenisUjian.value;
+        const errorDiv = document.getElementById("errorJenisUjian");
+        const btnStart = document.getElementById("btnStartQuiz");
+
+        if (selected === "") {
+          errorDiv.textContent = "Silakan pilih jenis ujian.";
+          errorDiv.classList.remove("d-none");
+          btnStart.disabled = true;
+        } else {
+          errorDiv.classList.add("d-none");
+          btnStart.disabled = false;
+        }
+      });
+
     } catch (error) {
       console.error("Gagal mengambil daftar siswa:", error);
     }
@@ -397,48 +426,60 @@
     const nisnInput = document.getElementById("studentNisn").value.trim();
     const errorDiv = document.getElementById("errorNisn");
     const btnStart = document.getElementById("btnStartQuiz");
+    const jenisUjian = document.getElementById("jenisUjian");
+    const errorJenisUjian = document.getElementById("errorJenisUjian");
+
     errorDiv.classList.remove("d-none", "success-text");
+    errorJenisUjian.classList.add("d-none");
+    btnStart.disabled = true;
+
     if (!name) {
       errorDiv.textContent = "Silahkan pilih nama siswa";
       errorDiv.classList.add("error-text");
       errorDiv.classList.remove("d-none");
-      btnStart.disabled = true;
+      jenisUjian.disabled = true;
       return;
     }
+
     if (!nisnInput) {
       errorDiv.textContent = "Silahkan isi data nisn anda";
       errorDiv.classList.add("error-text");
       errorDiv.classList.remove("d-none");
-      btnStart.disabled = true;
+      jenisUjian.disabled = true;
       return;
     }
+
     if (studentDatabase[name] === nisnInput) {
       errorDiv.textContent = "Data nisn anda sudah benar";
       errorDiv.classList.remove("error-text");
       errorDiv.classList.add("success-text");
       errorDiv.classList.remove("d-none");
-      btnStart.disabled = false;
+      jenisUjian.disabled = false;
     } else {
       errorDiv.textContent = "Data nisn anda salah";
       errorDiv.classList.add("error-text");
       errorDiv.classList.remove("d-none");
-      btnStart.disabled = true;
+      jenisUjian.disabled = true;
     }
   }
 
   async function startQuiz() {
     const name = document.getElementById("studentName").value.trim();
     const nisn = document.getElementById("studentNisn").value.trim();
-    if (!name || !nisn || studentDatabase[name] !== nisn) {
-      Swal.fire("Error!", "Nama atau NISN tidak valid.", "error");
+    const jenisUjian = document.getElementById("jenisUjian").value;
+
+    if (!name || !nisn || studentDatabase[name] !== nisn || !jenisUjian) {
+      Swal.fire("Error!", "Harap lengkapi semua data.", "error");
       return;
     }
+
     studentName = name;
     await fetchQuizDataFromSheet(selectedSheet);
     if (quizData.length === 0) {
       alert("Gagal memuat soal.");
       return;
     }
+
     answers = new Array(quizData.length).fill(null);
     document.getElementById("nameForm").classList.add("d-none");
     document.getElementById("quizContainer").classList.remove("d-none");
@@ -545,29 +586,49 @@
     document.getElementById("quizContainer").classList.add("d-none");
     document.getElementById("scoreContainer").classList.remove("d-none");
     document.getElementById("reviewContainer").classList.remove("d-none");
+
     const numericScore = Math.round((score / quizData.length) * 100);
     const statusText = numericScore >= kkmValue ? "Lulus" : "Belum Lulus";
+    const jenisUjian = document.getElementById("jenisUjian").value;
+
     document.getElementById("finalName").innerText = studentName;
     document.getElementById("finalScore").innerText = score;
     document.getElementById("totalScore").innerText = quizData.length;
     document.getElementById("finalScoreNumericResult").innerText = numericScore;
     document.getElementById("finalStatus").innerText = statusText;
     document.getElementById("finalStatus").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
-    document.getElementById("finalStatusReview").innerText = statusText;
-    document.getElementById("finalStatusReview").className = numericScore >= kkmValue ? "status-lulus" : "status-tidak-lulus";
+
+    document.getElementById("finalJenisUjian").innerText = jenisUjian;
+    document.getElementById("finalMapel").innerText = selectedMapel;
+    document.getElementById("finalBab").innerText = selectedBab;
+    document.getElementById("finalTp").innerText = selectedTp;
+
+    document.getElementById("finalJenisUjianReview").innerText = jenisUjian;
+    document.getElementById("finalMapelReview").innerText = selectedMapel;
+    document.getElementById("finalBabReview").innerText = selectedBab;
+    document.getElementById("finalTpReview").innerText = selectedTp;
+
     clearInterval(timerInterval);
-    sendFinalData();
+    sendFinalData(jenisUjian);
     renderReview();
   }
 
-  function sendFinalData() {
+  function sendFinalData(jenisUjian) {
     if (hasSubmitted) return;
     hasSubmitted = true;
+
     const formData = new FormData();
     formData.append("nama", studentName);
     formData.append("nilai", Math.round((score / quizData.length) * 100));
     formData.append("bab", selectedSheet);
     formData.append("timestamp", new Date().toLocaleString());
+
+    // Kirim tambahan data
+    formData.append("mata_pelajaran", selectedMapel);
+    formData.append("bab_nama", selectedBab);
+    formData.append("tujuan_pembelajaran", selectedTp);
+    formData.append("jenis_ujian", jenisUjian);
+
     quizData.forEach((q, index) => {
       const answer = answers[index];
       let displayText = "Tidak dijawab";
@@ -576,6 +637,7 @@
       }
       formData.append(`soal_${index + 1}`, displayText);
     });
+
     fetch("https://script.google.com/macros/s/AKfycbx38Apysds4fWt8gWnftve4yyK7qoqo9wHT1JyRCV48r2_j4qm8uv85lQbyGGiqmVU9QQ/exec?sheet=Sheet1", {
       method: "POST",
       body: formData
@@ -618,15 +680,22 @@
     const doc = new jsPDF();
     const numericScore = Math.round((score / quizData.length) * 100);
     const statusText = numericScore >= kkmValue ? "Lulus" : "Belum Lulus";
+    const jenisUjian = document.getElementById("jenisUjian").value;
+
     doc.setFontSize(14);
     doc.text("Waktu Habis!", 10, 10);
     doc.text(`Nama: ${studentName}`, 10, 20);
     doc.text(`Jumlah Benar: ${score} dari ${quizData.length}`, 10, 30);
     doc.text(`Nilai: ${numericScore}`, 10, 40);
     doc.text(`Status: ${statusText}`, 10, 50);
+    doc.text(`Jenis Ujian: ${jenisUjian}`, 10, 60);
+    doc.text(`Mata Pelajaran: ${selectedMapel}`, 10, 70);
+    doc.text(`Bab: ${selectedBab}`, 10, 80);
+    doc.text(`Tujuan Pembelajaran: ${selectedTp}`, 10, 90);
     doc.setFontSize(12);
-    doc.text("Review Jawaban", 10, 60);
-    let y = 70;
+    doc.text("Review Jawaban", 10, 100);
+
+    let y = 110;
     quizData.forEach((q, index) => {
       if (y > 270) {
         doc.addPage();
@@ -652,6 +721,7 @@
         y += 6;
       }
     });
+
     if (y > 270) {
       doc.addPage();
       y = 20;
@@ -661,6 +731,14 @@
     doc.text(`Nilai: ${numericScore}`, 10, y);
     y += 7;
     doc.text(`Status: ${statusText}`, 10, y);
+    y += 7;
+    doc.text(`Jenis Ujian: ${jenisUjian}`, 10, y);
+    y += 7;
+    doc.text(`Mata Pelajaran: ${selectedMapel}`, 10, y);
+    y += 7;
+    doc.text(`Bab: ${selectedBab}`, 10, y);
+    y += 7;
+    doc.text(`Tujuan Pembelajaran: ${selectedTp}`, 10, y);
     doc.save(`Hasil_Ujian_${studentName.replace(/\s+/g, '_')}.pdf`);
   }
 
@@ -686,6 +764,8 @@
     document.getElementById("studentName").value = "";
     document.getElementById("studentNisn").value = "";
     document.getElementById("errorNisn").classList.add("d-none");
+    document.getElementById("jenisUjian").value = "";
+    document.getElementById("errorJenisUjian").classList.add("d-none");
     document.getElementById("btnStartQuiz").disabled = true;
     document.getElementById("nameForm").classList.add("d-none");
     document.getElementById("materialSelection").classList.remove("d-none");
